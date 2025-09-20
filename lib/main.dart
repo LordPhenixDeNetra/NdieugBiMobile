@@ -23,6 +23,7 @@ import 'presentation/providers/search_bar_provider.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/products_screen.dart';
 import 'presentation/screens/cart_screen.dart';
+import 'presentation/pages/debug_page.dart';
 
 // Theme
 import 'core/theme/app_theme.dart';
@@ -108,6 +109,7 @@ class NdieugBiApp extends StatelessWidget {
               '/home': (context) => const HomeScreen(),
               '/products': (context) => const ProductsScreen(),
               '/cart': (context) => const CartScreen(),
+              '/debug': (context) => const DebugPage(),
             },
           );
         },

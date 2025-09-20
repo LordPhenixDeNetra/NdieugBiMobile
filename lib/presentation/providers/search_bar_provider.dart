@@ -7,6 +7,10 @@ class SearchBarProvider extends ChangeNotifier {
   // Get or create text controller for a specific search bar
   TextEditingController getController(String searchBarId, {TextEditingController? existingController}) {
     if (existingController != null) {
+      // Remove existing listener if already added
+      if (_controllers.containsKey(searchBarId)) {
+        _controllers[searchBarId]?.removeListener(() => _onTextChanged(searchBarId));
+      }
       _controllers[searchBarId] = existingController;
       _hasTextStates[searchBarId] = existingController.text.isNotEmpty;
       existingController.addListener(() => _onTextChanged(searchBarId));
@@ -36,6 +40,11 @@ class SearchBarProvider extends ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  // Public method to notify text changes
+  void notifyTextChanged(String searchBarId) {
+    _onTextChanged(searchBarId);
   }
 
   // Clear text for a specific search bar

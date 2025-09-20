@@ -12,6 +12,8 @@ import '../widgets/loading_widget.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/error_widget.dart';
 import '../widgets/add_product_form.dart';
+import '../widgets/edit_product_form.dart';
+import 'product_details_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -374,6 +376,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       onTap: () => _showProductDetails(context, product),
                       onEdit: () => _showEditProductDialog(context, product),
                       onDelete: () => _showDeleteConfirmation(context, product),
+                      onAddToCart: () => _addToCart(context, product),
                     ),
                   ),
                 );
@@ -403,16 +406,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   void _showProductDetails(BuildContext context, Product product) {
-    // TODO: Navigate to product details screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Détails de ${product.name}')),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProductDetailsScreen(product: product),
+      ),
     );
   }
 
   void _showEditProductDialog(BuildContext context, Product product) {
-    // TODO: Implement edit product dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Modifier ${product.name}')),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => EditProductForm(product: product),
     );
   }
 
@@ -421,24 +426,51 @@ class _ProductsScreenState extends State<ProductsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmer la suppression'),
-        content: Text('Êtes-vous sûr de vouloir supprimer "${product.name}" ?'),
+        content: Text('Êtes-vous sûr de vouloir supprimer le produit "${product.name}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Annuler'),
           ),
-          TextButton(
-            onPressed: () {
+          ElevatedButton(
+            onPressed: () async {
               Navigator.of(context).pop();
-              context.read<ProductProvider>().deleteProduct(product.id);
+              try {
+                await context.read<ProductProvider>().deleteProduct(product.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Produit "${product.name}" supprimé avec succès'),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur lors de la suppression: $e'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              }
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             child: const Text('Supprimer'),
           ),
         ],
       ),
+    );
+  }
+
+  void _addToCart(BuildContext context, Product product) {
+    // TODO: Implement add to cart functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${product.name} ajouté au panier')),
     );
   }
 }

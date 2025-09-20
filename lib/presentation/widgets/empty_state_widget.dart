@@ -85,73 +85,81 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget>
       child: SlideTransition(
         position: _slideAnimation,
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: (widget.iconColor ?? colorScheme.primary).withValues(alpha: 0.1),
-                      border: Border.all(
-                        color: (widget.iconColor ?? colorScheme.primary).withValues(alpha: 0.2),
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      widget.icon,
-                      size: widget.iconSize ?? 48,
-                      color: widget.iconColor ?? colorScheme.primary.withValues(alpha: 0.7),
-                    ),
-                  ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height * 0.3,
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  widget.title,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  widget.subtitle,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                if (widget.customAction != null)
-                  ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: widget.customAction!,
-                  )
-                else if (widget.actionText != null && widget.onAction != null)
-                  ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: ElevatedButton.icon(
-                      onPressed: widget.onAction,
-                      icon: const Icon(Icons.add),
-                      label: Text(widget.actionText!),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: (widget.iconColor ?? colorScheme.primary).withValues(alpha: 0.1),
+                          border: Border.all(
+                            color: (widget.iconColor ?? colorScheme.primary).withValues(alpha: 0.2),
+                            width: 2,
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        child: Icon(
+                          widget.icon,
+                          size: widget.iconSize ?? 48,
+                          color: widget.iconColor ?? colorScheme.primary.withValues(alpha: 0.7),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                    const SizedBox(height: 24),
+                    Text(
+                      widget.title,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.subtitle,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    if (widget.customAction != null)
+                      ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: widget.customAction!,
+                      )
+                    else if (widget.actionText != null && widget.onAction != null)
+                      ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: ElevatedButton.icon(
+                          onPressed: widget.onAction,
+                          icon: const Icon(Icons.add),
+                          label: Text(widget.actionText!),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

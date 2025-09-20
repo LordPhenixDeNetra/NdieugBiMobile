@@ -33,7 +33,18 @@ class HomeScreen extends StatelessWidget {
                 ),
               ],
             ),
-            floatingActionButton: const ThemeToggleButton(),
+            floatingActionButton: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton.small(
+                  onPressed: () => Navigator.pushNamed(context, '/debug'),
+                  backgroundColor: Colors.red,
+                  child: const Icon(Icons.bug_report, color: Colors.white),
+                ),
+                const SizedBox(height: 8),
+                const ThemeToggleButton(),
+              ],
+            ),
             floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           );
         },

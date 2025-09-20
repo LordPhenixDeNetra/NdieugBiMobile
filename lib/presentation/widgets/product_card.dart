@@ -90,48 +90,60 @@ class ProductCard extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(8.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Product Name
-                    Text(
-                      product.name,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        product.name,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    // Category
+                    Flexible(
+                      child: Text(
+                        product.category,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    // Category
-                    Text(
-                      product.category,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const Spacer(),
                     // Price and Stock
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
+                        Flexible(
+                          flex: 2,
                           child: Text(
                             '${product.price.toStringAsFixed(0)} FCFA',
-                            style: theme.textTheme.titleMedium?.copyWith(
+                            style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colorScheme.primary,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          'Stock: ${product.stock}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: _getStockColor(context),
-                            fontWeight: FontWeight.w500,
+                        Flexible(
+                          flex: 1,
+                          child: Text(
+                            'Stock: ${product.stock}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: _getStockColor(context),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
                           ),
                         ),
                       ],
@@ -143,15 +155,15 @@ class ProductCard extends StatelessWidget {
             // Add to Cart Button
             if (onAddToCart != null && product.stock > 0)
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onAddToCart,
-                    icon: const Icon(Icons.add_shopping_cart, size: 16),
-                    label: const Text('Ajouter'),
+                    icon: const Icon(Icons.add_shopping_cart, size: 14),
+                    label: const Text('Ajouter', style: TextStyle(fontSize: 12)),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),

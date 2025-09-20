@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/search_bar_provider.dart';
-import 'animated_search_bar_wrapper.dart';
 
-class SearchBarWidget extends StatelessWidget {
+class SearchBarWidget extends StatefulWidget {
   final String hintText;
   final Function(String) onChanged;
   final VoidCallback? onClear;
@@ -24,37 +21,43 @@ class SearchBarWidget extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // Generate unique ID for this search bar instance
-    final searchBarId = '${hintText}_${hashCode}';
-    
-    return AnimatedSearchBarWrapper(
-      searchBarId: searchBarId,
-      child: Consumer<SearchBarProvider>(
-        builder: (context, searchBarProvider, child) {
-          return _buildSearchBarWidget(context, searchBarProvider, searchBarId);
-        },
-      ),
-    );
+  State<SearchBarWidget> createState() => _SearchBarWidgetState();
+}
+
+class _SearchBarWidgetState extends State<SearchBarWidget> {
+  late TextEditingController _controller;
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = widget.controller ?? TextEditingController();
+    _hasText = _controller.text.isNotEmpty;
+    _controller.addListener(_onTextChanged);
   }
 
-  Widget _buildSearchBarWidget(BuildContext context, SearchBarProvider searchBarProvider, String searchBarId) {
+  void _onTextChanged() {
+    final hasText = _controller.text.isNotEmpty;
+    if (hasText != _hasText) {
+      setState(() {
+        _hasText = hasText;
+      });
+    }
+    print('SearchBar onTextChanged: "${_controller.text}"');
+  }
+
+  @override
+  void dispose() {
+    if (widget.controller == null) {
+      _controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final animationWrapper = AnimatedSearchBarWrapperProvider.of(context);
-    
-    // Get or create controller for this search bar
-    final textController = searchBarProvider.getController(searchBarId, existingController: controller);
-    final hasText = searchBarProvider.getHasText(searchBarId);
-
-    // Trigger animations based on text state
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (hasText) {
-        animationWrapper?.animateIn();
-      } else {
-        animationWrapper?.animateOut();
-      }
-    });
 
     return Container(
       decoration: BoxDecoration(
@@ -72,47 +75,43 @@ class SearchBarWidget extends StatelessWidget {
         ],
       ),
       child: TextField(
-        controller: textController,
-        autofocus: autofocus,
+        controller: _controller,
+        autofocus: widget.autofocus,
         decoration: InputDecoration(
-          hintText: hintText,
+          hintText: widget.hintText,
           hintStyle: TextStyle(
-            color: colorScheme.onSurface.withValues(alpha: 0.5),
+            color: Colors.grey[600],
           ),
-          prefixIcon: prefixIcon ?? Icon(
+          prefixIcon: widget.prefixIcon ?? Icon(
             Icons.search,
-            color: colorScheme.onSurface.withValues(alpha: 0.5),
+            color: Colors.grey[600],
           ),
-          suffixIcon: hasText
-              ? AnimatedBuilder(
-                  animation: animationWrapper?.scaleAnimation ?? const AlwaysStoppedAnimation(1.0),
-                  builder: (context, child) {
-                    return ScaleTransition(
-                      scale: animationWrapper?.scaleAnimation ?? const AlwaysStoppedAnimation(1.0),
-                      child: IconButton(
-                        onPressed: () => _clearText(context, searchBarProvider, searchBarId),
-                        icon: Icon(
-                          Icons.clear,
-                          color: colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                        tooltip: 'Effacer',
-                      ),
-                    );
-                  },
+          suffixIcon: _hasText
+              ? IconButton(
+                  onPressed: _clearText,
+                  icon: Icon(
+                    Icons.clear,
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  tooltip: 'Effacer',
                 )
-              : suffixIcon,
+              : widget.suffixIcon,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 16,
           ),
+          filled: true,
+          fillColor: Colors.white,
         ),
-        style: TextStyle(
-          color: colorScheme.onSurface,
+        style: const TextStyle(
+          color: Colors.black87,
           fontSize: 16,
+          fontWeight: FontWeight.w400,
         ),
         onChanged: (value) {
-          onChanged(value);
+          print('TextField onChanged: $value');
+          widget.onChanged(value);
         },
         onSubmitted: (value) {
           FocusScope.of(context).unfocus();
@@ -121,8 +120,9 @@ class SearchBarWidget extends StatelessWidget {
     );
   }
 
-  void _clearText(BuildContext context, SearchBarProvider searchBarProvider, String searchBarId) {
-    searchBarProvider.clearText(searchBarId, onClear);
+  void _clearText() {
+    _controller.clear();
+    widget.onClear?.call();
     FocusScope.of(context).unfocus();
   }
 }
