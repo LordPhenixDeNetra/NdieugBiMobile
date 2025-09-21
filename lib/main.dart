@@ -5,12 +5,17 @@ import 'package:flutter/services.dart';
 // Core services
 import 'services/sync_service.dart';
 import 'services/connectivity_service.dart';
+import 'services/database_service.dart';
+
+// Data repositories
+import 'data/repositories/invoice_repository.dart';
 
 // Presentation providers
 import 'presentation/providers/connectivity_provider.dart';
 import 'presentation/providers/product_provider.dart';
 import 'presentation/providers/cart_provider.dart';
 import 'presentation/providers/cart_screen_provider.dart';
+import 'presentation/providers/invoice_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/app_provider.dart';
 import 'presentation/providers/ui_provider.dart';
@@ -23,10 +28,15 @@ import 'presentation/providers/search_bar_provider.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/products_screen.dart';
 import 'presentation/screens/cart_screen.dart';
+import 'presentation/screens/cashier_screen.dart';
+import 'presentation/screens/invoices_list_screen.dart';
+import 'presentation/screens/invoice_screen.dart';
+import 'presentation/screens/menu_screen.dart';
 import 'presentation/pages/debug_page.dart';
 
 // Theme
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +47,13 @@ void main() async {
   
   final syncService = SyncService();
   await syncService.initialize();
+  
+  // Initialize database service
+  final databaseService = DatabaseService();
+  await databaseService.database; // This will initialize the database
+  
+  // Initialize repositories
+  final invoiceRepository = InvoiceRepository(databaseService);
   
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
@@ -49,12 +66,17 @@ void main() async {
   );
   
   runApp(
-    const NdieugBiApp(),
+    NdieugBiApp(invoiceRepository: invoiceRepository),
   );
 }
 
 class NdieugBiApp extends StatelessWidget {
-  const NdieugBiApp({super.key});
+  final InvoiceRepository invoiceRepository;
+  
+  const NdieugBiApp({
+    super.key,
+    required this.invoiceRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +97,9 @@ class NdieugBiApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => CartScreenProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => InvoiceProvider(invoiceRepository),
         ),
         ChangeNotifierProvider(
           create: (_) => CartItemProvider(),
@@ -109,7 +134,41 @@ class NdieugBiApp extends StatelessWidget {
               '/home': (context) => const HomeScreen(),
               '/products': (context) => const ProductsScreen(),
               '/cart': (context) => const CartScreen(),
+              '/cashier': (context) => const CashierScreen(),
+              '/invoices': (context) => const InvoicesListScreen(),
+              '/menu': (context) => const MenuScreen(),
               '/debug': (context) => const DebugPage(),
+            },
+            onGenerateRoute: (settings) {
+              if (settings.name == '/invoice') {
+                final invoiceId = settings.arguments as String;
+                return MaterialPageRoute(
+                  builder: (context) {
+                    return Consumer<InvoiceProvider>(
+                      builder: (context, invoiceProvider, child) {
+                        final invoice = invoiceProvider.getInvoiceFromList(invoiceId);
+                        if (invoice != null) {
+                          return InvoiceScreen(invoice: invoice);
+                        } else {
+                          // Load invoice if not in current list
+                          invoiceProvider.loadInvoiceById(invoiceId);
+                          return Scaffold(
+                            appBar: AppBar(
+                              title: const Text('Chargement...'),
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                            ),
+                            body: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  },
+                );
+              }
+              return null;
             },
           );
         },

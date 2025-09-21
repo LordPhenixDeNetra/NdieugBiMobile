@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class HomeScreenProvider extends ChangeNotifier {
   // Navigation methods
   void navigateToSales(BuildContext context) {
-    // TODO: Navigate to sales screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigation vers les ventes')),
-    );
+    Navigator.of(context).pushNamed('/cashier');
   }
 
   void navigateToInventory(BuildContext context) {
@@ -17,10 +14,7 @@ class HomeScreenProvider extends ChangeNotifier {
   }
 
   void navigateToInvoices(BuildContext context) {
-    // TODO: Navigate to invoices screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Navigation vers les factures')),
-    );
+    Navigator.of(context).pushNamed('/invoices');
   }
 
   void navigateToReports(BuildContext context) {

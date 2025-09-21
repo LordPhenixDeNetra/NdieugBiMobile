@@ -2,8 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 import '../core/constants/app_constants.dart';
+
+// Import conditionnel pour path_provider et sqflite_common_ffi_web
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -12,16 +16,39 @@ class DatabaseService {
 
   static Database? _database;
 
+  // Initialiser sqflite pour le web
+  static Future<void> initializeDatabase() async {
+    if (kIsWeb) {
+      // Configurer sqflite pour le web
+      databaseFactory = databaseFactoryFfiWeb;
+    }
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
+    await initializeDatabase();
     _database = await _initDatabase();
     return _database!;
   }
 
   Future<Database> _initDatabase() async {
     try {
-      Directory documentsDirectory = await getApplicationDocumentsDirectory();
-      String path = join(documentsDirectory.path, AppConstants.databaseName);
+      String path;
+      
+      if (kIsWeb) {
+        // Pour Flutter Web, utiliser un nom de base de données simple
+        // sqflite_common_ffi_web gère automatiquement le stockage
+        path = AppConstants.databaseName;
+      } else {
+        // Pour les plateformes mobiles/desktop, utiliser path_provider
+        try {
+          Directory documentsDirectory = await getApplicationDocumentsDirectory();
+          path = join(documentsDirectory.path, AppConstants.databaseName);
+        } catch (e) {
+          // Fallback si path_provider échoue
+          path = AppConstants.databaseName;
+        }
+      }
       
       return await openDatabase(
         path,
@@ -322,10 +349,30 @@ class DatabaseService {
 
   // Reset database (for testing or data reset)
   Future<void> resetDatabase() async {
-    await close();
-    Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    String path = join(documentsDirectory.path, AppConstants.databaseName);
-    await deleteDatabase(path);
-    _database = await _initDatabase();
+    try {
+      await _database?.close();
+      _database = null;
+      
+      String path;
+      
+      if (kIsWeb) {
+        // Pour Flutter Web, utiliser un nom de base de données simple
+        path = AppConstants.databaseName;
+      } else {
+        // Pour les plateformes mobiles/desktop, utiliser path_provider
+        try {
+          Directory documentsDirectory = await getApplicationDocumentsDirectory();
+          path = join(documentsDirectory.path, AppConstants.databaseName);
+        } catch (e) {
+          // Fallback si path_provider échoue
+          path = AppConstants.databaseName;
+        }
+      }
+      
+      await deleteDatabase(path);
+      _database = await _initDatabase();
+    } catch (e) {
+      throw Exception('Erreur lors de la réinitialisation de la base de données: $e');
+    }
   }
 }

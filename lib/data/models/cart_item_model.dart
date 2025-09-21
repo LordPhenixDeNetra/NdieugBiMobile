@@ -75,7 +75,9 @@ class CartItemModel {
       quantity: map['quantity'] as int,
       unitPrice: (map['unit_price'] as num).toDouble(),
       discount: (map['discount'] as num?)?.toDouble() ?? 0.0,
-      addedAt: DateTime.parse(map['added_at'] as String),
+      addedAt: map['added_at'] != null 
+          ? DateTime.parse(map['added_at'] as String)
+          : DateTime.now(),
       metadata: map['metadata'] != null 
           ? Map<String, dynamic>.from(map['metadata'] as Map)
           : null,
@@ -101,6 +103,39 @@ class CartItemModel {
     final map = toMap();
     map['cart_id'] = cartId;
     return map;
+  }
+
+  // Factory constructor from invoice item database map
+  factory CartItemModel.fromInvoiceItemMap(Map<String, dynamic> map) {
+    // Create a minimal product from the invoice item data
+    final product = Product(
+      id: map['product_id'] as String,
+      name: map['product_name'] as String,
+      barcode: map['product_barcode'] as String,
+      price: (map['unit_price'] as num).toDouble(),
+      costPrice: 0.0, // Not stored in invoice items
+      quantity: 0, // Not relevant for invoice items
+      minQuantity: 0, // Not stored in invoice items
+      category: '', // Not stored in invoice items
+      unit: 'pièce', // Default unit
+      description: '',
+      imageUrl: null,
+      isActive: true,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    return CartItemModel(
+      id: map['id'] as String,
+      productJson: ProductModel.fromEntity(product).toJson(),
+      quantity: map['quantity'] as int,
+      unitPrice: (map['unit_price'] as num).toDouble(),
+      discount: (map['discount'] as num?)?.toDouble() ?? 0.0,
+      addedAt: DateTime.parse(map['added_at'] as String),
+      metadata: map['metadata'] != null 
+          ? Map<String, dynamic>.from(map['metadata'] as Map)
+          : null,
+    );
   }
 
   // Copy with method that returns CartItemModel

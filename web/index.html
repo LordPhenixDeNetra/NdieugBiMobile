@@ -31,6 +31,13 @@
 
   <title>ndieug_bi_mobile</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- SQLite Web Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sqflite_sw.js');
+    }
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

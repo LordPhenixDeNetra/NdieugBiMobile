@@ -40,6 +40,7 @@ dependencies:
   
   # Database
   sqflite: ^2.3.0
+  sqflite_common_ffi_web: ^0.4.2+2
   path: ^1.8.3
   
   # Barcode Scanner
@@ -91,6 +92,27 @@ dependencies:
   
   # Equatable for value equality
   equatable: ^2.0.5
+  
+  # Bluetooth
+  flutter_bluetooth_serial: ^0.4.0
+  
+  # Alternative Bluetooth plugin with better namespace support
+  # flutter_bluetooth_serial_compat: ^0.4.0
+  
+  # Network Info
+  network_info_plus: ^4.1.0
+  
+  # Web Socket
+  web_socket_channel: ^2.4.0
+  
+  # Excel
+  excel: ^4.0.3
+  
+  # CSV
+  csv: ^6.0.0
+  
+  # Share Plus
+  share_plus: ^7.2.2
 
 dev_dependencies:
   flutter_test:

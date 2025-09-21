@@ -104,6 +104,8 @@ class AppColors {
   // Missing text colors
   static const Color darkTextSecondary = textSecondaryDark;
   static const Color lightTextSecondary = textSecondaryLight;
+  static const Color darkTextPrimary = textPrimaryDark;
+  static const Color lightTextPrimary = textPrimaryLight;
   
   // Missing accent colors
   static const Color darkAccentPrimary = accentPurple;
@@ -117,4 +119,12 @@ class AppColors {
   static const Color lightBorder = borderLight;
   static const Color darkBorder = borderDark;
   static const Color lightStatusSuccess = success;
+  static const Color lightStatusInfo = info;
+  static const Color darkStatusInfo = info;
+  static const Color darkStatusSuccess = success;
+  static const Color darkStatusError = error;
+  static const Color darkStatusWarning = warning;
+  
+  // Primary getter for compatibility
+  static const Color primary = primaryLight;
 }

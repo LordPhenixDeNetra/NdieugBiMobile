@@ -2,9 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../core/constants/app_constants.dart';
+import '../domain/models/connection.dart';
+import '../domain/models/data_source.dart';
 import 'database_service.dart';
 import 'connectivity_service.dart';
-import '../core/constants/app_constants.dart';
+import 'data_source_manager.dart';
+import 'connection_manager.dart' as conn_manager;
 
 enum SyncStatus {
   idle,
@@ -89,6 +93,8 @@ class SyncService extends ChangeNotifier {
 
   final DatabaseService _databaseService = DatabaseService();
   final ConnectivityService _connectivityService = ConnectivityService();
+  final DataSourceManager _dataSourceManager = DataSourceManager();
+  final conn_manager.ConnectionManager _connectionManager = conn_manager.ConnectionManager();
   
   SyncStatus _status = SyncStatus.idle;
   Timer? _autoSyncTimer;
@@ -98,6 +104,7 @@ class SyncService extends ChangeNotifier {
   SyncResult? _lastSyncResult;
   bool _autoSyncEnabled = true;
   bool _syncOnReconnect = true;
+  bool _offlineFirstEnabled = true;
 
   // Getters
   SyncStatus get status => _status;
@@ -106,6 +113,7 @@ class SyncService extends ChangeNotifier {
   SyncResult? get lastSyncResult => _lastSyncResult;
   bool get autoSyncEnabled => _autoSyncEnabled;
   bool get syncOnReconnect => _syncOnReconnect;
+  bool get offlineFirstEnabled => _offlineFirstEnabled;
   bool get isSyncing => _status == SyncStatus.syncing;
 
   String get statusMessage {
@@ -128,6 +136,10 @@ class SyncService extends ChangeNotifier {
   // Initialize sync service
   Future<void> initialize() async {
     try {
+      // DatabaseService s'initialise automatiquement
+      await _dataSourceManager.initialize();
+      await _connectionManager.initialize();
+      
       await _updatePendingItemsCount();
       
       // Listen to connectivity changes
@@ -402,7 +414,262 @@ class SyncService extends ChangeNotifier {
     }
   }
 
-  // Configuration methods
+  // Configuration methods for new features
+  void setOfflineFirstEnabled(bool enabled) {
+    _offlineFirstEnabled = enabled;
+    notifyListeners();
+  }
+
+  // Multi-source sync methods
+  Future<SyncResult> syncAllSources({bool forceSync = false}) async {
+    if (_status == SyncStatus.syncing && !forceSync) {
+      return SyncResult(
+        success: false,
+        syncedItems: 0,
+        failedItems: 0,
+        errors: ['Synchronisation déjà en cours'],
+        timestamp: DateTime.now(),
+      );
+    }
+
+    _updateStatus(SyncStatus.syncing);
+    
+    try {
+      int totalSynced = 0;
+      int totalFailed = 0;
+      List<String> allErrors = [];
+
+      // Sync with different data sources based on strategy
+      if (_offlineFirstEnabled) {
+        final offlineResult = await _syncOfflineFirst();
+        totalSynced += offlineResult.syncedItems;
+        totalFailed += offlineResult.failedItems;
+        allErrors.addAll(offlineResult.errors);
+      } else {
+        final onlineResult = await _syncOnlineFirst();
+        totalSynced += onlineResult.syncedItems;
+        totalFailed += onlineResult.failedItems;
+        allErrors.addAll(onlineResult.errors);
+      }
+
+      // Sync with available connections
+      final connectionResult = await _syncWithConnections();
+      totalSynced += connectionResult.syncedItems;
+      totalFailed += connectionResult.failedItems;
+      allErrors.addAll(connectionResult.errors);
+
+      final result = SyncResult(
+        success: totalFailed == 0,
+        syncedItems: totalSynced,
+        failedItems: totalFailed,
+        errors: allErrors,
+        timestamp: DateTime.now(),
+      );
+
+      _updateSyncResult(result, totalFailed == 0 ? SyncStatus.success : SyncStatus.error);
+      await _updatePendingItemsCount();
+      
+      return result;
+      
+    } catch (e) {
+      final result = SyncResult(
+        success: false,
+        syncedItems: 0,
+        failedItems: 0,
+        errors: ['Erreur de synchronisation multi-sources: $e'],
+        timestamp: DateTime.now(),
+      );
+      
+      _updateSyncResult(result, SyncStatus.error);
+      return result;
+    }
+  }
+
+  Future<SyncResult> _syncOfflineFirst() async {
+    int synced = 0;
+    int failed = 0;
+    List<String> errors = [];
+
+    try {
+      // Process local changes first
+      final localResult = await syncPendingItems();
+      synced += localResult.syncedItems;
+      failed += localResult.failedItems;
+      errors.addAll(localResult.errors);
+      
+      // Then sync with remote sources if connected
+      if (_connectivityService.isOnline) {
+        final remoteResult = await _syncWithRemoteSources();
+        synced += remoteResult.syncedItems;
+        failed += remoteResult.failedItems;
+        errors.addAll(remoteResult.errors);
+      }
+    } catch (e) {
+      failed++;
+      errors.add('Erreur sync offline-first: $e');
+    }
+
+    return SyncResult(
+      success: failed == 0,
+      syncedItems: synced,
+      failedItems: failed,
+      errors: errors,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  Future<SyncResult> _syncOnlineFirst() async {
+    int synced = 0;
+    int failed = 0;
+    List<String> errors = [];
+
+    try {
+      // Try remote sources first if connected
+      if (_connectivityService.isOnline) {
+        final remoteResult = await _syncWithRemoteSources();
+        synced += remoteResult.syncedItems;
+        failed += remoteResult.failedItems;
+        errors.addAll(remoteResult.errors);
+      }
+      
+      // Always process local changes
+      final localResult = await syncPendingItems();
+      synced += localResult.syncedItems;
+      failed += localResult.failedItems;
+      errors.addAll(localResult.errors);
+    } catch (e) {
+      failed++;
+      errors.add('Erreur sync online-first: $e');
+    }
+
+    return SyncResult(
+      success: failed == 0,
+      syncedItems: synced,
+      failedItems: failed,
+      errors: errors,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  Future<SyncResult> _syncWithRemoteSources() async {
+    int synced = 0;
+    int failed = 0;
+    List<String> errors = [];
+
+    try {
+      final activeSources = _dataSourceManager.dataSources.where((ds) => ds.isActive).toList();
+      
+      for (final source in activeSources) {
+        try {
+          switch (source.type) {
+            case DataSourceType.api:
+              final result = await _syncWithAPI(source);
+              synced += result.syncedItems;
+              failed += result.failedItems;
+              errors.addAll(result.errors);
+              break;
+            case DataSourceType.cloud:
+              final result = await _syncWithGoogleSheets(source);
+              synced += result.syncedItems;
+              failed += result.failedItems;
+              errors.addAll(result.errors);
+              break;
+            case DataSourceType.file:
+              final result = await _syncWithExcel(source);
+              synced += result.syncedItems;
+              failed += result.failedItems;
+              errors.addAll(result.errors);
+              break;
+            default:
+              break;
+          }
+        } catch (e) {
+          failed++;
+          errors.add('Erreur sync source ${source.name}: $e');
+        }
+      }
+    } catch (e) {
+      failed++;
+      errors.add('Erreur sync sources distantes: $e');
+    }
+
+    return SyncResult(
+      success: failed == 0,
+      syncedItems: synced,
+      failedItems: failed,
+      errors: errors,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  Future<SyncResult> _syncWithConnections() async {
+    int synced = 0;
+    int failed = 0;
+    List<String> errors = [];
+
+    try {
+      final activeConnections = _connectionManager.connections.values
+          .where((conn) => conn.status == ConnectionStatus.connected)
+          .toList();
+      
+      for (final connection in activeConnections) {
+        try {
+          // Simuler la synchronisation des données via connexion
+          final success = await _connectionManager.sendData(connection.config.name, {'sync': 'request'});
+          if (success) {
+            synced++;
+          } else {
+            failed++;
+            errors.add('Échec sync connexion ${connection.config.name}');
+          }
+        } catch (e) {
+          failed++;
+          errors.add('Erreur sync connexion ${connection.config.name}: $e');
+        }
+      }
+    } catch (e) {
+      failed++;
+      errors.add('Erreur sync connexions: $e');
+    }
+
+    return SyncResult(
+      success: failed == 0,
+      syncedItems: synced,
+      failedItems: failed,
+      errors: errors,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  Future<SyncResult> _syncWithAPI(DataSourceConfig source) async {
+    // Use existing sync logic but with specific API source
+    return await syncPendingItems();
+  }
+
+  Future<SyncResult> _syncWithGoogleSheets(DataSourceConfig source) async {
+    // Placeholder for Google Sheets sync implementation
+    debugPrint('Sync avec Google Sheets: ${source.name}');
+    return SyncResult(
+      success: true,
+      syncedItems: 0,
+      failedItems: 0,
+      errors: [],
+      timestamp: DateTime.now(),
+    );
+  }
+
+  Future<SyncResult> _syncWithExcel(DataSourceConfig source) async {
+    // Placeholder for Excel sync implementation
+    debugPrint('Sync avec Excel: ${source.name}');
+    return SyncResult(
+      success: true,
+      syncedItems: 0,
+      failedItems: 0,
+      errors: [],
+      timestamp: DateTime.now(),
+    );
+  }
+
   void setAutoSyncEnabled(bool enabled) {
     _autoSyncEnabled = enabled;
     if (enabled) {

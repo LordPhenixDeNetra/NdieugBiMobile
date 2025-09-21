@@ -156,7 +156,7 @@ class CartRepository {
         );
 
         final cartItemModel = CartItemModel.fromEntity(cartItem);
-        final cartItemMap = cartItemModel.toMap();
+        final cartItemMap = cartItemModel.toMapWithCartId(cartId);
 
         // Save cart item to database
         await _databaseService.insert(_cartItemTableName, cartItemMap);

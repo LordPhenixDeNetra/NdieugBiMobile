@@ -7,6 +7,7 @@ import '../providers/app_provider.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/connectivity_banner.dart';
 import '../widgets/theme_toggle_button.dart';
+import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -162,10 +163,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildQuickActions(BuildContext context, bool isDark) {
     final actions = [
-      {'icon': Icons.qr_code_scanner, 'title': 'Scanner', 'color': AppColors.lightAccentPrimary},
-      {'icon': Icons.inventory_2, 'title': 'Produits', 'color': AppColors.lightAccentSecondary},
-      {'icon': Icons.shopping_cart, 'title': 'Ventes', 'color': AppColors.lightStatusSuccess},
-      {'icon': Icons.receipt_long, 'title': 'Factures', 'color': AppColors.lightStatusWarning},
+      {'icon': Icons.qr_code_scanner, 'title': 'Scanner', 'color': AppColors.lightAccentPrimary, 'onTap': () {}},
+      {'icon': Icons.inventory_2, 'title': 'Produits', 'color': AppColors.lightAccentSecondary, 'onTap': () {}},
+      {'icon': Icons.shopping_cart, 'title': 'Ventes', 'color': AppColors.lightStatusSuccess, 'onTap': () {}},
+      {'icon': Icons.settings, 'title': 'Paramètres', 'color': AppColors.lightStatusInfo, 'onTap': () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SettingsPage()),
+        );
+      }},
     ];
 
     return Column(
@@ -195,6 +201,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               action['icon'] as IconData,
               action['title'] as String,
               action['color'] as Color,
+              action['onTap'] as VoidCallback,
               isDark,
             );
           },
@@ -203,7 +210,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildActionCard(BuildContext context, IconData icon, String title, Color color, bool isDark) {
+  Widget _buildActionCard(BuildContext context, IconData icon, String title, Color color, VoidCallback onTap, bool isDark) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
@@ -224,9 +231,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            // TODO: Implement navigation
-          },
+          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
