@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import '../core/constants/app_constants.dart';
 
 // Import conditionnel pour path_provider et sqflite_common_ffi_web
@@ -29,6 +29,11 @@ class DatabaseService {
     await initializeDatabase();
     _database = await _initDatabase();
     return _database!;
+  }
+
+  /// Initialise le service de base de données
+  Future<void> initialize() async {
+    await database; // Force l'initialisation de la base de données
   }
 
   Future<Database> _initDatabase() async {
@@ -372,7 +377,298 @@ class DatabaseService {
       await deleteDatabase(path);
       _database = await _initDatabase();
     } catch (e) {
-      throw Exception('Erreur lors de la réinitialisation de la base de données: $e');
+      debugPrint('Erreur lors de la réinitialisation de la base de données: $e');
+      rethrow;
+    }
+  }
+
+  // Product-specific methods
+  Future<List<Map<String, dynamic>>> getAllProducts() async {
+    final db = await database;
+    return await db.query('products');
+  }
+
+  Future<Map<String, dynamic>?> getProductById(String id) async {
+    final db = await database;
+    final results = await db.query(
+      'products',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<int> insertOrUpdateProduct(Map<String, dynamic> product) async {
+    final db = await database;
+    return await db.insert(
+      'products',
+      product,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<int> deleteProduct(String id) async {
+    final db = await database;
+    return await db.delete(
+      'products',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Invoice-specific methods
+  Future<List<Map<String, dynamic>>> getAllInvoices() async {
+    final db = await database;
+    return await db.query('invoices');
+  }
+
+  Future<Map<String, dynamic>?> getInvoiceById(String id) async {
+    final db = await database;
+    final results = await db.query(
+      'invoices',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<int> insertOrUpdateInvoice(Map<String, dynamic> invoice) async {
+    final db = await database;
+    return await db.insert(
+      'invoices',
+      invoice,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Récupère tous les clients
+  Future<List<Map<String, dynamic>>> getClients() async {
+    final db = await database;
+    try {
+      return await db.query('clients', orderBy: 'name ASC');
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des clients: $e');
+      rethrow;
+    }
+  }
+
+  // Méthodes pour la synchronisation automatique
+  /// Récupère les produits modifiés depuis une date donnée
+  Future<List<Map<String, dynamic>>> getRecentlyModifiedProducts(DateTime? since) async {
+    final db = await database;
+    try {
+      if (since == null) {
+        return await db.query('products', orderBy: 'updated_at DESC');
+      }
+      
+      return await db.query(
+        'products',
+        where: 'updated_at > ?',
+        whereArgs: [since.toIso8601String()],
+        orderBy: 'updated_at DESC',
+      );
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des produits modifiés: $e');
+      return [];
+    }
+  }
+
+  /// Récupère les clients modifiés depuis une date donnée
+  Future<List<Map<String, dynamic>>> getRecentlyModifiedClients(DateTime? since) async {
+    final db = await database;
+    try {
+      if (since == null) {
+        return await db.query('clients', orderBy: 'updated_at DESC');
+      }
+      
+      return await db.query(
+        'clients',
+        where: 'updated_at > ?',
+        whereArgs: [since.toIso8601String()],
+        orderBy: 'updated_at DESC',
+      );
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des clients modifiés: $e');
+      return [];
+    }
+  }
+
+  /// Récupère les factures modifiées depuis une date donnée
+  Future<List<Map<String, dynamic>>> getRecentlyModifiedInvoices(DateTime? since) async {
+    final db = await database;
+    try {
+      if (since == null) {
+        return await db.query('invoices', orderBy: 'updated_at DESC');
+      }
+      
+      return await db.query(
+        'invoices',
+        where: 'updated_at > ?',
+        whereArgs: [since.toIso8601String()],
+        orderBy: 'updated_at DESC',
+      );
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des factures modifiées: $e');
+      return [];
+    }
+  }
+
+  /// Récupère les articles de facture modifiés depuis une date donnée
+  Future<List<Map<String, dynamic>>> getRecentlyModifiedInvoiceItems(DateTime? since) async {
+    final db = await database;
+    try {
+      if (since == null) {
+        return await db.query('invoice_items', orderBy: 'added_at DESC');
+      }
+      
+      return await db.query(
+        'invoice_items',
+        where: 'added_at > ?',
+        whereArgs: [since.toIso8601String()],
+        orderBy: 'added_at DESC',
+      );
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des articles de facture modifiés: $e');
+      return [];
+    }
+  }
+
+  /// Récupère un client par ID
+  Future<Map<String, dynamic>?> getClientById(String id) async {
+    final db = await database;
+    final results = await db.query(
+      'clients',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  /// Récupère un article de facture par ID
+  Future<Map<String, dynamic>?> getInvoiceItemById(String id) async {
+    final db = await database;
+    final results = await db.query(
+      'invoice_items',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  /// Ajoute un produit
+  Future<int> addProduct(Map<String, dynamic> product) async {
+    final db = await database;
+    return await db.insert('products', product);
+  }
+
+  /// Met à jour un produit
+  Future<int> updateProduct(String id, Map<String, dynamic> product) async {
+    final db = await database;
+    product['updated_at'] = DateTime.now().toIso8601String();
+    return await db.update(
+      'products',
+      product,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Ajoute un client
+  Future<int> addClient(Map<String, dynamic> client) async {
+    final db = await database;
+    return await db.insert('clients', client);
+  }
+
+  /// Met à jour un client
+  Future<int> updateClient(String id, Map<String, dynamic> client) async {
+    final db = await database;
+    client['updated_at'] = DateTime.now().toIso8601String();
+    return await db.update(
+      'clients',
+      client,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Ajoute une facture
+  Future<int> addInvoice(Map<String, dynamic> invoice) async {
+    final db = await database;
+    return await db.insert('invoices', invoice);
+  }
+
+  /// Met à jour une facture
+  Future<int> updateInvoice(String id, Map<String, dynamic> invoice) async {
+    final db = await database;
+    invoice['updated_at'] = DateTime.now().toIso8601String();
+    return await db.update(
+      'invoices',
+      invoice,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Supprime une facture et ses articles associés
+  Future<int> deleteInvoice(String id) async {
+    final db = await database;
+    return await db.transaction((txn) async {
+      // Supprimer d'abord les articles de facture
+      await txn.delete(
+        'invoice_items',
+        where: 'invoice_id = ?',
+        whereArgs: [id],
+      );
+      
+      // Puis supprimer la facture
+      return await txn.delete(
+        'invoices',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+  }
+
+  /// Ajoute un article de facture
+  Future<int> addInvoiceItem(Map<String, dynamic> item) async {
+    final db = await database;
+    return await db.insert('invoice_items', item);
+  }
+
+  /// Met à jour un article de facture
+  Future<int> updateInvoiceItem(String id, Map<String, dynamic> item) async {
+    final db = await database;
+    return await db.update(
+      'invoice_items',
+      item,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Récupère tous les produits
+  Future<List<Map<String, dynamic>>> getProducts() async {
+    final db = await database;
+    try {
+      return await db.query('products', orderBy: 'name ASC');
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des produits: $e');
+      rethrow;
+    }
+  }
+
+  /// Récupère toutes les factures
+  Future<List<Map<String, dynamic>>> getInvoices() async {
+    final db = await database;
+    try {
+      return await db.query('invoices', orderBy: 'created_at DESC');
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des factures: $e');
+      rethrow;
     }
   }
 }

@@ -7,9 +7,25 @@ import '../widgets/connectivity_banner.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/animated_home_wrapper.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/statistics_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialiser le provider au démarrage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final homeProvider = Provider.of<HomeScreenProvider>(context, listen: false);
+      homeProvider.initialize();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,19 +69,22 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildDashboard(BuildContext context, HomeScreenProvider homeProvider) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildWelcomeSection(context),
-          const SizedBox(height: 30),
-          _buildQuickStats(context),
-          const SizedBox(height: 30),
-          _buildQuickActions(context, homeProvider),
-          const SizedBox(height: 30),
-          _buildRecentActivity(context, homeProvider),
-        ],
+    return RefreshIndicator(
+      onRefresh: () => homeProvider.refreshData(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildWelcomeSection(context),
+            const SizedBox(height: 30),
+            _buildQuickStats(context, homeProvider),
+            const SizedBox(height: 30),
+            _buildQuickActions(context, homeProvider),
+            const SizedBox(height: 30),
+            _buildRecentActivity(context, homeProvider),
+          ],
+        ),
       ),
     );
   }
@@ -147,70 +166,104 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickStats(BuildContext context) {
+  Widget _buildQuickStats(BuildContext context, HomeScreenProvider homeProvider) {
     final theme = Theme.of(context);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Aperçu rapide',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Aperçu rapide',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (homeProvider.isLoadingStats || homeProvider.isRefreshing)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (homeProvider.statsError != null)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error, color: Colors.red, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    homeProvider.statsError!,
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else ...[
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  icon: Icons.inventory_2,
+                  title: 'Produits',
+                  value: homeProvider.quickStats.totalProducts.toString(),
+                  subtitle: 'En stock',
+                  color: AppColors.success,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  icon: Icons.shopping_cart,
+                  title: 'Ventes',
+                  value: homeProvider.quickStats.todaySales.toString(),
+                  subtitle: 'Aujourd\'hui',
+                  color: AppColors.info,
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                context,
-                icon: Icons.inventory_2,
-                title: 'Produits',
-                value: '1,234',
-                subtitle: 'En stock',
-                color: AppColors.success,
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  icon: Icons.attach_money,
+                  title: 'Revenus',
+                  value: '${homeProvider.quickStats.monthlyRevenue.toStringAsFixed(0)} F',
+                  subtitle: 'Ce mois',
+                  color: AppColors.warning,
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                context,
-                icon: Icons.shopping_cart,
-                title: 'Ventes',
-                value: '89',
-                subtitle: 'Aujourd\'hui',
-                color: AppColors.info,
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  icon: Icons.trending_up,
+                  title: 'Croissance',
+                  value: '${homeProvider.quickStats.growthPercentage >= 0 ? '+' : ''}${homeProvider.quickStats.growthPercentage.toStringAsFixed(1)}%',
+                  subtitle: 'vs mois dernier',
+                  color: homeProvider.quickStats.growthPercentage >= 0 ? AppColors.success : AppColors.error,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                context,
-                icon: Icons.attach_money,
-                title: 'Revenus',
-                value: '125,450 F',
-                subtitle: 'Ce mois',
-                color: AppColors.warning,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                context,
-                icon: Icons.trending_up,
-                title: 'Croissance',
-                value: '+12%',
-                subtitle: 'vs mois dernier',
-                color: AppColors.success,
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -447,14 +500,25 @@ class HomeScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            TextButton(
-              onPressed: () => homeProvider.navigateToActivity(context),
-              child: Text(
-                'Voir tout',
-                style: TextStyle(
-                  color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+            Row(
+              children: [
+                if (homeProvider.isLoadingActivities)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => homeProvider.navigateToActivity(context),
+                  child: Text(
+                    'Voir tout',
+                    style: TextStyle(
+                      color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -467,97 +531,163 @@ class HomeScreen extends StatelessWidget {
               color: (isDark ? AppColors.onSurfaceDark : AppColors.onSurface).withValues(alpha: 0.1),
             ),
           ),
-          child: Column(
-            children: [
-              _buildActivityItem(
-                context,
-                icon: Icons.shopping_cart,
-                title: 'Nouvelle vente',
-                subtitle: 'Facture #1234 - 15,500 F',
-                time: 'Il y a 5 min',
-                color: AppColors.success,
-              ),
-              _buildDivider(context),
-              _buildActivityItem(
-                context,
-                icon: Icons.inventory_2,
-                title: 'Stock mis à jour',
-                subtitle: 'Produit: Coca Cola 33cl',
-                time: 'Il y a 12 min',
-                color: AppColors.info,
-              ),
-              _buildDivider(context),
-              _buildActivityItem(
-                context,
-                icon: Icons.warning,
-                title: 'Stock faible',
-                subtitle: 'Produit: Pain de mie',
-                time: 'Il y a 1h',
-                color: AppColors.warning,
-              ),
-            ],
-          ),
+          child: _buildActivitiesContent(context, homeProvider, isDark),
         ),
       ],
     );
   }
 
-  Widget _buildActivityItem(
+  Widget _buildActivitiesContent(BuildContext context, HomeScreenProvider homeProvider, bool isDark) {
+    // Afficher l'erreur si elle existe
+    if (homeProvider.activitiesError != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.error, color: Colors.red, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                homeProvider.activitiesError!,
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
+            TextButton(
+              onPressed: () => homeProvider.refreshActivities(),
+              child: Text('Réessayer', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Afficher les activités ou un message si vide
+    final activities = homeProvider.recentActivities;
+    
+    if (activities.isEmpty && !homeProvider.isLoadingActivities) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(
+              Icons.history,
+              size: 48,
+              color: (isDark ? AppColors.onSurfaceDark : AppColors.onSurface).withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucune activité récente',
+              style: TextStyle(
+                color: (isDark ? AppColors.onSurfaceDark : AppColors.onSurface).withValues(alpha: 0.6),
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Afficher les activités (limiter à 5 pour l'affichage)
+    final displayActivities = activities.take(5).toList();
+    
+    return Column(
+      children: [
+        for (int i = 0; i < displayActivities.length; i++) ...[
+          _buildDynamicActivityItem(
+            context,
+            activity: displayActivities[i],
+            onTap: () => homeProvider.navigateToActivityDetail(context, displayActivities[i]),
+          ),
+          if (i < displayActivities.length - 1) _buildDivider(context),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDynamicActivityItem(
     BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String time,
-    required Color color,
+    required RecentActivity activity,
+    VoidCallback? onTap,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+    // Déterminer l'icône et la couleur selon le type d'activité
+    IconData icon = Icons.info;
+    Color color = AppColors.primary;
+    
+    switch (activity.type) {
+      case ActivityType.invoice:
+        icon = Icons.receipt_long;
+        color = AppColors.success;
+        break;
+      case ActivityType.sale:
+        icon = Icons.shopping_cart;
+        color = AppColors.success;
+        break;
+      case ActivityType.lowStock:
+        icon = Icons.warning;
+        color = AppColors.warning;
+        break;
+      case ActivityType.stockUpdate:
+        icon = Icons.inventory_2;
+        color = AppColors.info;
+        break;
+      case ActivityType.newProduct:
+        icon = Icons.add_box;
+        color = AppColors.primaryLight;
+        break;
+    }
+    
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.onSurfaceDark : AppColors.onSurface,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    activity.title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.onSurfaceDark : AppColors.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: (isDark ? AppColors.onSurfaceDark : AppColors.onSurface).withValues(alpha: 0.6),
+                  const SizedBox(height: 2),
+                  Text(
+                    activity.subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: (isDark ? AppColors.onSurfaceDark : AppColors.onSurface).withValues(alpha: 0.6),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Text(
-            time,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: (isDark ? AppColors.onSurfaceDark : AppColors.onSurface).withValues(alpha: 0.5),
+            Text(
+              activity.timeAgo,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: (isDark ? AppColors.onSurfaceDark : AppColors.onSurface).withValues(alpha: 0.5),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -574,25 +574,6 @@ class ImportExportService extends ChangeNotifier {
     }).toList();
   }
 
-  Future<List<List<String>>> _convertDataForGoogleSheets(
-    List<Map<String, dynamic>> data,
-    String tableName,
-  ) async {
-    if (data.isEmpty) return [];
-
-    // Get headers from first row
-    final headers = data.first.keys.toList();
-    final rows = <List<String>>[headers];
-
-    // Convert data rows
-    for (final item in data) {
-      final row = headers.map((header) => item[header]?.toString() ?? '').toList();
-      rows.add(row);
-    }
-
-    return rows;
-  }
-
   // Utility Methods
   ImportFormat? _detectImportFormat(String? extension) {
     switch (extension?.toLowerCase()) {
@@ -690,7 +671,7 @@ class ImportExportService extends ChangeNotifier {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final files = directory.listSync()
-          .where((entity) => entity is File)
+          .whereType<File>()
           .map((entity) => entity.path)
           .where((path) => path.contains('export') || path.contains('backup'))
           .toList();

@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'services/sync_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/database_service.dart';
+import 'services/data_source_service.dart';
+import 'services/preferences_service.dart';
 
 // Data repositories
 import 'data/repositories/invoice_repository.dart';
@@ -41,27 +43,26 @@ import 'core/theme/app_colors.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize core services
+  // Initialiser les services
   final connectivityService = ConnectivityService();
-  await connectivityService.initialize();
-  
   final syncService = SyncService();
-  await syncService.initialize();
-  
-  // Initialize database service
   final databaseService = DatabaseService();
-  await databaseService.database; // This will initialize the database
+  final dataSourceService = DataSourceService();
+  final preferencesService = PreferencesService();
+
+  await connectivityService.initialize();
+  await syncService.initialize();
+  await databaseService.initialize();
+  await preferencesService.initialize();
+  await dataSourceService.initialize();
   
   // Initialize repositories
   final invoiceRepository = InvoiceRepository(databaseService);
   
-  // Set system UI overlay style
+  // Set initial system UI overlay style (will be updated dynamically based on theme)
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
   
@@ -122,6 +123,20 @@ class NdieugBiApp extends StatelessWidget {
               ),
             );
           }
+
+          // Update system UI overlay style based on current theme
+          final isDark = themeProvider.themeMode == ThemeMode.dark ||
+              (themeProvider.themeMode == ThemeMode.system && 
+               MediaQuery.of(context).platformBrightness == Brightness.dark);
+          
+          SystemChrome.setSystemUIOverlayStyle(
+            SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+              systemNavigationBarColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+            ),
+          );
 
           return MaterialApp(
             title: 'NdieugBi',

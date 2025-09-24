@@ -99,6 +99,16 @@ dependencies:
   # Alternative Bluetooth plugin with better namespace support
   # flutter_bluetooth_serial_compat: ^0.4.0
   
+  # Google APIs
+  googleapis: ^11.4.0
+  googleapis_auth: ^1.4.1
+  
+  # Google Sheets API
+  gsheets: ^0.5.0
+  
+  # OAuth2 for Google authentication
+  google_sign_in: ^6.1.5
+  
   # Network Info
   network_info_plus: ^4.1.0
   
@@ -145,6 +155,7 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/animations/
+    - assets/google_credentials.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

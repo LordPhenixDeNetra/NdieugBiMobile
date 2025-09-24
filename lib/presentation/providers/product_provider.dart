@@ -127,6 +127,24 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> adjustStock(String productId, int adjustment, {String? reason}) async {
+    _setLoading(true);
+    _clearError();
+    
+    try {
+      final updatedProduct = await _productRepository.adjustStock(productId, adjustment, reason: reason);
+      final index = _products.indexWhere((p) => p.id == productId);
+      if (index != -1) {
+        _products[index] = updatedProduct;
+        _applyFilters();
+      }
+    } catch (e) {
+      _setError('Erreur lors de l\'ajustement du stock: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> bulkUpdateStock(Map<String, int> stockUpdates) async {
     _setLoading(true);
     _clearError();

@@ -19,36 +19,43 @@ class ProductDetailsScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(context, theme, isDark),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildProductHeader(context, theme, isDark),
-                  const SizedBox(height: 24),
-                  _buildProductInfo(context, theme, isDark),
-                  const SizedBox(height: 24),
-                  _buildStockInfo(context, theme, isDark),
-                  const SizedBox(height: 24),
-                  _buildProfitInfo(context, theme, isDark),
-                  const SizedBox(height: 32),
-                  _buildActionButtons(context, theme),
-                ],
+    return Consumer<ProductProvider>(
+      builder: (context, productProvider, child) {
+        // Récupérer la version la plus récente du produit depuis le provider
+        final currentProduct = productProvider.getProductById(product.id) ?? product;
+        
+        return Scaffold(
+          backgroundColor: theme.colorScheme.surface,
+          body: CustomScrollView(
+            slivers: [
+              _buildAppBar(context, theme, isDark, currentProduct),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildProductHeader(context, theme, isDark, currentProduct),
+                      const SizedBox(height: 24),
+                      _buildProductInfo(context, theme, isDark, currentProduct),
+                      const SizedBox(height: 24),
+                      _buildStockInfo(context, theme, isDark, currentProduct),
+                      const SizedBox(height: 24),
+                      _buildProfitInfo(context, theme, isDark, currentProduct),
+                      const SizedBox(height: 32),
+                      _buildActionButtons(context, theme, currentProduct),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildAppBar(BuildContext context, ThemeData theme, bool isDark) {
+  Widget _buildAppBar(BuildContext context, ThemeData theme, bool isDark, Product currentProduct) {
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
@@ -56,7 +63,7 @@ class ProductDetailsScreen extends StatelessWidget {
       foregroundColor: theme.colorScheme.onPrimary,
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
-          product.name,
+          currentProduct.name,
           style: TextStyle(
             color: theme.colorScheme.onPrimary,
             fontWeight: FontWeight.bold,
@@ -84,7 +91,7 @@ class ProductDetailsScreen extends StatelessWidget {
       ),
       actions: [
         PopupMenuButton<String>(
-          onSelected: (value) => _handleMenuAction(context, value),
+          onSelected: (value) => _handleMenuAction(context, value, currentProduct),
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'edit',
@@ -112,7 +119,7 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductHeader(BuildContext context, ThemeData theme, bool isDark) {
+  Widget _buildProductHeader(BuildContext context, ThemeData theme, bool isDark, Product currentProduct) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -139,15 +146,15 @@ class ProductDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              product.name,
+              currentProduct.name,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
-            if (product.description.isNotEmpty) ...[
+            if (currentProduct.description.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                product.description,
+                currentProduct.description,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
@@ -159,14 +166,14 @@ class ProductDetailsScreen extends StatelessWidget {
                 _buildInfoChip(
                   context,
                   icon: Icons.category,
-                  label: product.category,
+                  label: currentProduct.category,
                   color: AppColors.info,
                 ),
                 const SizedBox(width: 8),
                 _buildInfoChip(
                   context,
                   icon: Icons.straighten,
-                  label: product.unit,
+                  label: currentProduct.unit,
                   color: AppColors.info,
                 ),
               ],
@@ -177,7 +184,7 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductInfo(BuildContext context, ThemeData theme, bool isDark) {
+  Widget _buildProductInfo(BuildContext context, ThemeData theme, bool isDark, Product currentProduct) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -209,7 +216,7 @@ class ProductDetailsScreen extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     title: 'Prix d\'achat',
-                    value: '${product.costPrice.toStringAsFixed(0)} FCFA',
+                    value: '${currentProduct.costPrice.toStringAsFixed(0)} FCFA',
                     icon: Icons.shopping_cart,
                     color: AppColors.warning,
                   ),
@@ -219,7 +226,7 @@ class ProductDetailsScreen extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     title: 'Prix de vente',
-                    value: '${product.price.toStringAsFixed(0)} FCFA',
+                    value: '${currentProduct.price.toStringAsFixed(0)} FCFA',
                     icon: Icons.sell,
                     color: AppColors.success,
                   ),
@@ -232,8 +239,8 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStockInfo(BuildContext context, ThemeData theme, bool isDark) {
-    final isLowStock = product.isLowStock;
+  Widget _buildStockInfo(BuildContext context, ThemeData theme, bool isDark, Product currentProduct) {
+    final isLowStock = currentProduct.isLowStock;
     
     return Card(
       elevation: 2,
@@ -266,7 +273,7 @@ class ProductDetailsScreen extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     title: 'Quantité en stock',
-                    value: '${product.quantity} ${product.unit}',
+                    value: '${currentProduct.quantity} ${currentProduct.unit}',
                     icon: Icons.inventory_2,
                     color: isLowStock ? AppColors.error : AppColors.success,
                   ),
@@ -276,7 +283,7 @@ class ProductDetailsScreen extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     title: 'Seuil minimum',
-                    value: '${product.minQuantity} ${product.unit}',
+                    value: '${currentProduct.minQuantity} ${currentProduct.unit}',
                     icon: Icons.warning,
                     color: AppColors.warning,
                   ),
@@ -319,10 +326,10 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfitInfo(BuildContext context, ThemeData theme, bool isDark) {
-    final profit = product.profit;
-    final profitMargin = product.price > 0 
-        ? ((profit / product.price) * 100) 
+  Widget _buildProfitInfo(BuildContext context, ThemeData theme, bool isDark, Product currentProduct) {
+    final profit = currentProduct.profit;
+    final profitMargin = currentProduct.price > 0 
+        ? ((profit / currentProduct.price) * 100) 
         : 0.0;
 
     return Card(
@@ -458,7 +465,7 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, ThemeData theme) {
+  Widget _buildActionButtons(BuildContext context, ThemeData theme, Product currentProduct) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -466,7 +473,7 @@ class ProductDetailsScreen extends StatelessWidget {
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _addToCart(context),
+                onPressed: () => _addToCart(context, currentProduct),
                 icon: const Icon(Icons.add_shopping_cart),
                 label: const Text('Ajouter au panier'),
                 style: ElevatedButton.styleFrom(
@@ -479,7 +486,7 @@ class ProductDetailsScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _editProduct(context),
+                onPressed: () => _editProduct(context, currentProduct),
                 icon: const Icon(Icons.edit),
                 label: const Text('Modifier'),
                 style: OutlinedButton.styleFrom(
@@ -491,7 +498,7 @@ class ProductDetailsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: () => _deleteProduct(context),
+          onPressed: () => _deleteProduct(context, currentProduct),
           icon: const Icon(Icons.delete),
           label: const Text('Supprimer le produit'),
           style: OutlinedButton.styleFrom(
@@ -504,25 +511,25 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  void _handleMenuAction(BuildContext context, String action) {
+  void _handleMenuAction(BuildContext context, String action, Product currentProduct) {
     switch (action) {
       case 'edit':
-        _editProduct(context);
+        _editProduct(context, currentProduct);
         break;
       case 'delete':
-        _deleteProduct(context);
+        _deleteProduct(context, currentProduct);
         break;
     }
   }
 
-  void _addToCart(BuildContext context) {
+  void _addToCart(BuildContext context, Product currentProduct) {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     
     try {
-      cartProvider.addProduct(product);
+      cartProvider.addProduct(currentProduct);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${product.name} ajouté au panier'),
+          content: Text('${currentProduct.name} ajouté au panier'),
           backgroundColor: AppColors.success,
           action: SnackBarAction(
             label: 'Voir le panier',
@@ -543,30 +550,30 @@ class ProductDetailsScreen extends StatelessWidget {
     }
   }
 
-  void _editProduct(BuildContext context) {
+  void _editProduct(BuildContext context, Product currentProduct) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => EditProductForm(product: product),
+      builder: (context) => EditProductForm(product: currentProduct),
     ).then((_) {
       // Refresh the screen after editing
       Navigator.of(context).pop();
     });
   }
 
-  void _deleteProduct(BuildContext context) {
+  void _deleteProduct(BuildContext context, Product currentProduct) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Supprimer le produit'),
-        content: Text('Êtes-vous sûr de vouloir supprimer "${product.name}" ?'),
+        content: Text('Êtes-vous sûr de vouloir supprimer "${currentProduct.name}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Annuler'),
           ),
           TextButton(
-            onPressed: () => _confirmDelete(context),
+            onPressed: () => _confirmDelete(context, currentProduct),
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -577,19 +584,19 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context) async {
+  void _confirmDelete(BuildContext context, Product currentProduct) async {
     final productProvider = Provider.of<ProductProvider>(context, listen: false);
     
     try {
       Navigator.of(context).pop(); // Close dialog
       Navigator.of(context).pop(); // Go back to products list
       
-      await productProvider.deleteProduct(product.id);
+      await productProvider.deleteProduct(currentProduct.id);
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${product.name} supprimé avec succès'),
+            content: Text('${currentProduct.name} supprimé avec succès'),
             backgroundColor: AppColors.success,
           ),
         );

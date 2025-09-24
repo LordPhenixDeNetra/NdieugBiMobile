@@ -73,6 +73,13 @@ class CartProvider extends ChangeNotifier {
     
     if (_currentCart == null) return;
 
+    // Vérifier la disponibilité du stock avant d'ajouter
+    if (!canAddProduct(product, quantity)) {
+      final error = getValidationError(product, quantity);
+      _setError(error ?? 'Impossible d\'ajouter ce produit au panier');
+      return;
+    }
+
     _setLoading(true);
     _clearError();
     
@@ -106,6 +113,24 @@ class CartProvider extends ChangeNotifier {
 
   Future<void> updateQuantity(String productId, int quantity) async {
     if (_currentCart == null) return;
+
+    // Trouver le produit dans le panier pour obtenir les informations du produit
+    final cartItem = getCartItem(productId);
+    if (cartItem == null) {
+      _setError('Produit non trouvé dans le panier');
+      return;
+    }
+
+    // Vérifier si la nouvelle quantité est valide par rapport au stock
+    if (quantity > cartItem.product.stock) {
+      _setError('Stock insuffisant (${cartItem.product.stock} disponible)');
+      return;
+    }
+
+    if (quantity <= 0) {
+      _setError('Quantité invalide');
+      return;
+    }
 
     _setLoading(true);
     _clearError();

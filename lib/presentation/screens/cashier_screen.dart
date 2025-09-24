@@ -102,9 +102,23 @@ class _CashierScreenState extends State<CashierScreen> {
       return;
     }
 
+    // Vérifier si le produit est en rupture de stock
+    if (product.stock <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${product.name} est en rupture de stock'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (quantity > product.stock) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Stock insuffisant (${product.stock} disponible)')),
+        SnackBar(
+          content: Text('Stock insuffisant (${product.stock} disponible)'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }

@@ -37,8 +37,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: isDark 
-                ? AppColors.darkGradientSecondary
-                : AppColors.lightGradientSecondary,
+                ? AppColors.darkGradientPrimary
+                : AppColors.lightGradientPrimary,
             ),
             boxShadow: [
               BoxShadow(

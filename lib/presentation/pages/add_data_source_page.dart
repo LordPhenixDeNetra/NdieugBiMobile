@@ -20,6 +20,9 @@ class _AddDataSourcePageState extends State<AddDataSourcePage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _apiKeyController = TextEditingController();
+  final _spreadsheetIdController = TextEditingController();
+  final _sheetNameController = TextEditingController();
+  final _rangeController = TextEditingController();
   
   DataSourceType _selectedType = DataSourceType.local;
   bool _isActive = true;
@@ -49,6 +52,9 @@ class _AddDataSourcePageState extends State<AddDataSourcePage> {
       _usernameController.text = dataSource.credentials!['username'] ?? '';
       _passwordController.text = dataSource.credentials!['password'] ?? '';
       _apiKeyController.text = dataSource.credentials!['apiKey'] ?? '';
+      _spreadsheetIdController.text = dataSource.credentials!['spreadsheetId'] ?? '';
+      _sheetNameController.text = dataSource.credentials!['sheetName'] ?? '';
+      _rangeController.text = dataSource.credentials!['range'] ?? '';
     }
   }
 
@@ -59,6 +65,9 @@ class _AddDataSourcePageState extends State<AddDataSourcePage> {
     _usernameController.dispose();
     _passwordController.dispose();
     _apiKeyController.dispose();
+    _spreadsheetIdController.dispose();
+    _sheetNameController.dispose();
+    _rangeController.dispose();
     super.dispose();
   }
 
@@ -244,7 +253,81 @@ class _AddDataSourcePageState extends State<AddDataSourcePage> {
               ),
             ),
             const SizedBox(height: 16),
-            if (_selectedType == DataSourceType.api) ...[
+            if (_selectedType == DataSourceType.cloud) ...[
+              // Configuration Google Sheets
+              TextFormField(
+                controller: _spreadsheetIdController,
+                decoration: const InputDecoration(
+                  labelText: 'ID de la feuille de calcul',
+                  hintText: 'Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+                  prefixIcon: Icon(Icons.table_chart),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'L\'ID de la feuille de calcul est requis';
+                  }
+                  if (value.length < 40) {
+                    return 'ID de feuille de calcul invalide';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _sheetNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nom de la feuille (optionnel)',
+                  hintText: 'Ex: Sheet1, Données, etc.',
+                  prefixIcon: Icon(Icons.tab),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _rangeController,
+                decoration: const InputDecoration(
+                  labelText: 'Plage de cellules (optionnel)',
+                  hintText: 'Ex: A1:Z100, A:Z, etc.',
+                  prefixIcon: Icon(Icons.grid_on),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.blue, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Configuration Google Sheets',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '• L\'ID se trouve dans l\'URL de votre feuille Google Sheets\n'
+                      '• Assurez-vous que la feuille est partagée en lecture\n'
+                      '• L\'authentification se fera via Google Sign-In',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (_selectedType == DataSourceType.api) ...[
               TextFormField(
                 controller: _apiKeyController,
                 decoration: const InputDecoration(
@@ -510,7 +593,18 @@ class _AddDataSourcePageState extends State<AddDataSourcePage> {
       final credentials = <String, String>{};
       
       if (_requiresCredentials()) {
-        if (_selectedType == DataSourceType.api) {
+        if (_selectedType == DataSourceType.cloud) {
+          // Configuration Google Sheets
+          if (_spreadsheetIdController.text.isNotEmpty) {
+            credentials['spreadsheetId'] = _spreadsheetIdController.text.trim();
+          }
+          if (_sheetNameController.text.isNotEmpty) {
+            credentials['sheetName'] = _sheetNameController.text.trim();
+          }
+          if (_rangeController.text.isNotEmpty) {
+            credentials['range'] = _rangeController.text.trim();
+          }
+        } else if (_selectedType == DataSourceType.api) {
           if (_apiKeyController.text.isNotEmpty) {
             credentials['apiKey'] = _apiKeyController.text;
           }
@@ -585,16 +679,36 @@ class _AddDataSourcePageState extends State<AddDataSourcePage> {
     });
 
     try {
-      // Simulate connection test
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connexion testée avec succès'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      if (_selectedType == DataSourceType.cloud) {
+        // Test spécifique pour Google Sheets
+        final spreadsheetId = _spreadsheetIdController.text.trim();
+        if (spreadsheetId.isEmpty) {
+          throw Exception('ID de la feuille de calcul requis pour le test');
+        }
+        
+        // Simuler le test de connexion Google Sheets
+        await Future.delayed(const Duration(seconds: 3));
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Connexion Google Sheets réussie'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Test générique pour les autres types
+        await Future.delayed(const Duration(seconds: 2));
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connexion testée avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

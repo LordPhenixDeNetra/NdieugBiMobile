@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import 'data_sources_page.dart';
+import 'data_source_config_page.dart';
 import 'connections_page.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -27,6 +28,17 @@ class SettingsPage extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const DataSourcesPage()),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildSettingsCard(
+            context,
+            icon: Icons.settings_input_antenna,
+            title: 'Configuration des sources',
+            subtitle: 'Configurer la source de données (locale ou externe)',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const DataSourceConfigPage()),
             ),
           ),
           const SizedBox(height: 8),

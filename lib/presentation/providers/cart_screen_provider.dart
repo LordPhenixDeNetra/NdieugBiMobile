@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../domain/entities/invoice.dart';
 import 'invoice_provider.dart';
 import 'cart_provider.dart';
+import 'product_provider.dart';
 
 class CartScreenProvider extends ChangeNotifier {
   final ScrollController scrollController = ScrollController();
@@ -47,6 +48,7 @@ class CartScreenProvider extends ChangeNotifier {
     try {
       final cartProvider = context.read<CartProvider>();
       final invoiceProvider = context.read<InvoiceProvider>();
+      final productProvider = context.read<ProductProvider>();
       
       // Vérifier si le panier n'est pas vide
       if (cartProvider.isEmpty) {
@@ -59,17 +61,77 @@ class CartScreenProvider extends ChangeNotifier {
         return;
       }
 
+      final cart = cartProvider.currentCart!;
+      
+      // Actualiser les données des produits pour avoir les stocks les plus récents
+      await productProvider.refresh();
+      
+      // Vérifier que tous les produits ont suffisamment de stock avant de procéder
+      for (final item in cart.items) {
+        // Obtenir les informations les plus récentes du produit
+        final currentProduct = productProvider.getProductById(item.product.id);
+        if (currentProduct == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Produit ${item.product.name} non trouvé'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        
+        if (item.quantity > currentProduct.quantity) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Stock insuffisant pour ${item.product.name}. Disponible: ${currentProduct.quantity}, Demandé: ${item.quantity}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        
+        // Vérifier que le produit n'est pas en rupture de stock
+        if (currentProduct.quantity <= 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${item.product.name} est en rupture de stock'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
+
       // Créer la facture à partir du panier
       final invoice = await invoiceProvider.createInvoiceFromCart(
-        cart: cartProvider.currentCart!,
+        cart: cart,
       );
 
       if (invoice != null) {
         // Marquer la facture comme payée (paiement en espèces par défaut)
         await invoiceProvider.markInvoiceAsPaid(invoice.id, PaymentMethod.cash);
         
+        // Diminuer les stocks pour chaque produit vendu
+        try {
+          for (final item in cart.items) {
+            await productProvider.adjustStock(item.product.id, -item.quantity);
+          }
+        } catch (e) {
+          // Si erreur lors de la diminution des stocks, afficher un avertissement
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Vente finalisée mais erreur lors de la mise à jour des stocks: $e'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+        
         // Vider le panier après le paiement
         await cartProvider.clearCart();
+        
+        // Actualiser les produits pour refléter les nouveaux stocks dans l'interface
+        await productProvider.refresh();
         
         // Afficher un message de succès
         ScaffoldMessenger.of(context).showSnackBar(

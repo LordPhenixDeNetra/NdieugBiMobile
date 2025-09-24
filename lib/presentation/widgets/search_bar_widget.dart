@@ -43,7 +43,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
         _hasText = hasText;
       });
     }
-    print('SearchBar onTextChanged: "${_controller.text}"');
+    debugPrint('SearchBar onTextChanged: "${_controller.text}"');
   }
 
   @override
@@ -110,7 +110,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           fontWeight: FontWeight.w400,
         ),
         onChanged: (value) {
-          print('TextField onChanged: $value');
+          debugPrint('TextField onChanged: $value');
           widget.onChanged(value);
         },
         onSubmitted: (value) {

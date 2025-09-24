@@ -58,6 +58,9 @@ class ConnectivityService extends ChangeNotifier {
     }
   }
 
+  /// Vérifie si la connexion actuelle est WiFi
+  bool get isWifiConnected => _connectionType == ConnectivityResult.wifi;
+
   String get statusMessage {
     switch (_status) {
       case ConnectivityStatus.online:
@@ -273,6 +276,14 @@ class ConnectivityService extends ChangeNotifier {
       return _lastOfflineTime!.difference(_lastOnlineTime!);
     }
     return DateTime.now().difference(_lastOnlineTime!);
+  }
+
+  // Stream for connectivity changes
+  Stream<ConnectivityStatus> get connectivityStream {
+    return Stream.periodic(
+      Duration(seconds: AppConstants.connectivityCheckInterval),
+      (_) => _status,
+    ).distinct();
   }
 
   @override

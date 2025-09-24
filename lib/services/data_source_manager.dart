@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
 import '../domain/models/data_source.dart';
 import 'database_service.dart';
 import 'connectivity_service.dart';
+import 'google_sheets_service.dart';
+import 'google_auth_service.dart';
 
 /// Configuration d'une source de données
 class DataSourceConfig {
@@ -96,6 +97,7 @@ class DataSourceManager extends ChangeNotifier {
   final DatabaseService _databaseService = DatabaseService();
   // final SyncService _syncService = SyncService();
   final ConnectivityService _connectivityService = ConnectivityService();
+  final GoogleSheetsService _googleSheetsService = GoogleSheetsService(GoogleAuthService());
 
   final List<DataSourceConfig> _dataSources = [];
   final Map<DataSourceType, DataSourceSyncResult?> _lastSyncResults = {};
@@ -367,14 +369,32 @@ class DataSourceManager extends ChangeNotifier {
         throw Exception('Connexion Internet requise pour Google Sheets');
       }
 
-      // TODO: Implémenter l'intégration Google Sheets
+      // Initialiser le service Google Sheets avec les credentials
+      await _googleSheetsService.initialize();
+      
+      // Authentifier si nécessaire
+      if (!_googleSheetsService.isAuthenticated) {
+        await _googleSheetsService.authenticate();
+      }
+
+      // Connecter à la feuille de calcul
+      final spreadsheetId = source.credentials?['spreadsheetId'] as String?;
+      if (spreadsheetId == null) {
+        throw Exception('ID de la feuille de calcul Google Sheets non spécifié');
+      }
+
+      await _googleSheetsService.connectToSpreadsheet(spreadsheetId);
+
+      // Synchroniser les données
+      final syncResult = await _googleSheetsService.syncFromSheets();
+      
       return DataSourceSyncResult(
         sourceType: source.type,
         success: true,
-        recordsProcessed: 0,
-        recordsSuccess: 0,
+        recordsProcessed: (syncResult['recordsProcessed'] as int?) ?? 0,
+        recordsSuccess: (syncResult['recordsSuccess'] as int?) ?? 0,
         timestamp: DateTime.now(),
-        details: {'message': 'Synchronisation Google Sheets à implémenter'},
+        details: syncResult,
       );
     } catch (e) {
       return DataSourceSyncResult(

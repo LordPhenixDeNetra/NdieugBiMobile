@@ -36,6 +36,7 @@ class DataSource {
   final Map<String, dynamic> config;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final Duration? syncInterval;
 
   const DataSource({
     required this.id,
@@ -49,6 +50,7 @@ class DataSource {
     this.config = const {},
     required this.createdAt,
     this.updatedAt,
+    this.syncInterval,
   });
 
   DataSource copyWith({
@@ -63,6 +65,7 @@ class DataSource {
     Map<String, dynamic>? config,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Duration? syncInterval,
   }) {
     return DataSource(
       id: id ?? this.id,
@@ -76,6 +79,7 @@ class DataSource {
       config: config ?? this.config,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      syncInterval: syncInterval ?? this.syncInterval,
     );
   }
 
@@ -92,6 +96,7 @@ class DataSource {
       'config': config,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'syncInterval': syncInterval?.inMinutes,
     };
   }
 
@@ -117,6 +122,9 @@ class DataSource {
       createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       updatedAt: json['updatedAt'] != null 
           ? DateTime.parse(json['updatedAt']) 
+          : null,
+      syncInterval: json['syncInterval'] != null
+          ? Duration(minutes: json['syncInterval'] as int)
           : null,
     );
   }
@@ -157,6 +165,29 @@ class DataSource {
       case DataSourceType.cache:
         return 'Cache';
     }
+  }
+
+  /// Convertit l'instance en Map (pour la sérialisation)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type.name,
+      'status': status.name,
+      'description': description,
+      'host': host,
+      'port': port,
+      'lastSync': lastSync?.toIso8601String(),
+      'config': config,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'syncInterval': syncInterval?.inMinutes,
+    };
+  }
+
+  /// Valide la configuration de la source de données
+  bool isValid() {
+    return id.isNotEmpty && name.isNotEmpty;
   }
 
   // Additional getters
